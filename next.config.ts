@@ -6,7 +6,9 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 export default withNextIntl({
-  // Your existing next.config options can go here
+  // Standalone output — required for Docker + Railway deployment
+  // Generates a self-contained .next/standalone folder
+  output: 'standalone',
   reactStrictMode: true,
   experimental: {
     serverActions: { bodySizeLimit: '2mb' },

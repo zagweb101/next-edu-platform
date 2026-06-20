@@ -30,6 +30,16 @@ yarn-error.log*
 .env*.local
 .env.production
 
+# local SQLite database
+/db/*.db
+/db/*.db-journal
+
+# uploaded user files
+/upload/
+
+# skills metadata (not needed for deployment)
+/skills/
+
 # vercel
 .vercel
 
