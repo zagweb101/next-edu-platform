@@ -193,3 +193,50 @@ Stage Summary:
   3. Add PostgreSQL + Redis plugins
   4. Set environment variables (AUTH_SECRET, AUTH_URL, etc.)
   5. Deploy and run `bun run db:push && bun run db:seed` from Railway shell
+
+---
+Task ID: 6
+Agent: main (Super Z) - PROJECTS-USAGE.md creation
+Task: Create a comprehensive usage guide and push it to both the template master repo and the user's new edu-platform repo
+
+Work Log:
+- Verified edu-platform repo exists (public, created 2026-06-21T13:09:04Z, 1 commit "Initial commit")
+- Verified edu-platform was created via "Use this template" (no parent fork relationship, clean history)
+- Confirmed PROJECTS-USAGE.md does NOT exist on either repo
+- Created comprehensive PROJECTS-USAGE.md (20KB, 650 lines) covering:
+  * Goal of the template repository (golden rule: never modify the template)
+  * 5-step workflow for starting new projects (use template → clone → env → db → run)
+  * Mandatory customization checklist (branding, logo, colors, i18n, NextAuth)
+  * Prisma models guide with examples for different project types
+  * RBAC customization (how to change roles from ADMIN/MANAGER/USER to project-specific roles)
+  * How to add new dashboard pages and sidebar items
+  * API route patterns with auth + RBAC enforcement
+  * Payment integration examples (Moyasar + custom products)
+  * Notification system usage (in-app, email, push)
+  * Multi-language addition guide (ar, en, + new languages)
+  * Railway deployment checklist with environment variables
+  * Common troubleshooting issues
+  * 4 project-type examples (edu-platform, e-commerce, clinic, SaaS)
+  * Pre-delivery checklist
+  * Important tips for maintaining the template
+- Committed to local repo: "docs: add PROJECTS-USAGE.md — comprehensive guide for using the boilerplate in new projects" (97bcf5d)
+- Pushed to template master (zagweb101/next-boiler-plate): ✅
+  * File URL: https://github.com/zagweb101/next-boiler-plate/blob/main/PROJECTS-USAGE.md
+  * Size: 20092 bytes
+- Pushed same file to edu-platform repo via GitHub Contents API (PUT method, since repos have unrelated histories):
+  * File URL: https://github.com/zagweb101/edu-platform/blob/main/PROJECTS-USAGE.md
+  * Commit: 07f6b08
+- Removed temporary `edu` remote and cleaned token from URLs
+
+Stage Summary:
+- Both repos now contain the comprehensive PROJECTS-USAGE.md guide:
+  1. https://github.com/zagweb101/next-boiler-plate/blob/main/PROJECTS-USAGE.md (template master)
+  2. https://github.com/zagweb101/edu-platform/blob/main/PROJECTS-USAGE.md (new project)
+- Edu-platform repo now has 2 commits: Initial commit + PROJECTS-USAGE.md
+- User can now read the guide to understand exactly how to:
+  * Customize branding for edu-platform
+  * Add Course/Module/Lesson/Enrollment Prisma models
+  * Build student/teacher/admin dashboards
+  * Integrate Moyasar for course payments
+  * Deploy to Railway
+- The template master remains the source of truth — any future updates to PROJECTS-USAGE.md should go there first
