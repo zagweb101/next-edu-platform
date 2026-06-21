@@ -72,3 +72,11 @@ export const audit = {
     });
   },
 };
+
+/**
+ * Convenience wrapper for audit.log()
+ * Usage: import { logAudit } from '@/lib/audit'; await logAudit({...});
+ */
+export async function logAudit(entry: AuditEntry) {
+  return audit.log(entry);
+}
