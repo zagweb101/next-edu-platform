@@ -83,7 +83,12 @@
     "viewAll": "عرض الكل",
     "myCourses": "كورساتي",
     "certificates": "شهاداتي",
-    "teach": "لوحة المعلّم"
+    "teach": "لوحة المعلّم",
+    "live": "البث المباشر",
+    "forum": "المنتدى",
+    "messages": "الرسائل",
+    "affiliate": "برنامج العمولة",
+    "coupons": "الكوبونات"
   },
   "roles": {
     "ADMIN": "مدير",

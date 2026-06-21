@@ -70,6 +70,29 @@ model User {
   certificates      Certificate[]
   reviews           Review[]
 
+  // Live streaming
+  liveSessions      LiveSession[]
+  liveAttendances   LiveAttendee[]
+  liveChatMessages  LiveChatMessage[]
+
+  // Forum
+  forumTopics       ForumTopic[]
+  forumPosts        ForumPost[]
+  forumTopicLikes   ForumTopicLike[]
+  forumPostLikes    ForumPostLike[]
+
+  // Messaging
+  conversations     ConversationParticipant[]
+  messages          Message[]
+
+  // Coupons
+  couponUsages      CouponUsage[]
+
+  // Affiliate
+  affiliate         Affiliate?
+  affiliateClicks   AffiliateClick[]
+  affiliateConversions AffiliateConversion[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -236,6 +259,7 @@ model Payment {
   enrollment      Enrollment?    @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
   enrollmentId    String?        @unique
   auditLogs       AuditLog[]
+  affiliateConversion AffiliateConversion?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -373,6 +397,13 @@ model Course {
   enrollments  Enrollment[]
   reviews      Review[]
   certificates Certificate[]
+
+  // New relations
+  liveSessions LiveSession[]
+  forumTopics  ForumTopic[]
+  coupons      Coupon[]
+  affiliateClicks   AffiliateClick[]
+  affiliateConversions AffiliateConversion[]
 
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -565,4 +596,389 @@ model Certificate {
 
   @@index([studentId])
   @@index([courseId])
+}
+
+// ===================================================================
+// LIVE STREAMING — Zoom integration + WebRTC fallback
+// ===================================================================
+
+enum LiveSessionStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELED
+}
+
+enum LiveProvider {
+  ZOOM
+  WEBRTC
+  YOUTUBE
+  VIMEO
+}
+
+model LiveSession {
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  courseId        String?
+  course          Course?          @relation(fields: [courseId], references: [id])
+  teacherId       String
+  teacher         User             @relation(fields: [teacherId], references: [id])
+  provider        LiveProvider     @default(WEBRTC)
+  status          LiveSessionStatus @default(SCHEDULED)
+  scheduledStart  DateTime
+  scheduledEnd    DateTime?
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  // Provider-specific
+  zoomMeetingId   String?
+  zoomJoinUrl     String?
+  zoomStartUrl    String?
+  zoomPassword    String?
+  webrtcRoomId    String?          // unique room id for WebRTC
+  youtubeLiveUrl  String?
+  // Stats
+  maxViewers      Int              @default(0)
+  attendees       LiveAttendee[]
+  chatMessages    LiveChatMessage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([teacherId])
+  @@index([courseId])
+  @@index([status])
+  @@index([scheduledStart])
+}
+
+model LiveAttendee {
+  id            String      @id @default(cuid())
+  liveSessionId String
+  liveSession   LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt      DateTime    @default(now())
+  leftAt        DateTime?
+  duration      Int         @default(0) // seconds
+
+  @@unique([liveSessionId, userId])
+  @@index([liveSessionId])
+  @@index([userId])
+}
+
+model LiveChatMessage {
+  id            String      @id @default(cuid())
+  liveSessionId String
+  liveSession   LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message       String
+  isPinned      Boolean     @default(false)
+  isDeleted     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([liveSessionId, createdAt])
+  @@index([userId])
+}
+
+// ===================================================================
+// DISCUSSION FORUMS — Topics + Posts + Likes
+// ===================================================================
+
+model ForumCategory {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  color       String?       // hex color for badge
+  order       Int           @default(0)
+  topics      ForumTopic[]
+  createdAt   DateTime      @default(now())
+
+  @@index([order])
+}
+
+model ForumTopic {
+  id           String         @id @default(cuid())
+  categoryId   String
+  category     ForumCategory  @relation(fields: [categoryId], references: [id])
+  courseId     String?        // optional: link to specific course
+  course       Course?        @relation(fields: [courseId], references: [id])
+  authorId     String
+  author       User           @relation(fields: [authorId], references: [id])
+  title        String
+  slug         String         @unique
+  content      String
+  isPinned     Boolean        @default(false)
+  isLocked     Boolean        @default(false)
+  isSolved     Boolean        @default(false)
+  viewsCount   Int            @default(0)
+  postsCount   Int            @default(0)
+  posts        ForumPost[]
+  likes        ForumTopicLike[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model ForumPost {
+  id          String   @id @default(cuid())
+  topicId     String
+  topic       ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  content     String
+  isSolution  Boolean  @default(false)
+  likes       ForumPostLike[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([topicId, createdAt])
+  @@index([authorId])
+}
+
+model ForumTopicLike {
+  id        String     @id @default(cuid())
+  topicId   String
+  topic     ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([topicId, userId])
+}
+
+model ForumPostLike {
+  id        String    @id @default(cuid())
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([postId, userId])
+}
+
+// ===================================================================
+// DIRECT MESSAGING — Conversations + Messages
+// ===================================================================
+
+model Conversation {
+  id           String      @id @default(cuid())
+  // For 1-on-1 chats: 2 participants. For group: more.
+  participants ConversationParticipant[]
+  messages     Message[]
+  lastMessageAt DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([lastMessageAt])
+}
+
+model ConversationParticipant {
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            String        @default("member") // admin | member
+  lastReadAt      DateTime?
+  muted           Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content         String
+  attachments     Json?        // [{ type, url, name, size }]
+  replyToId       String?
+  replyTo         Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[]    @relation("MessageReply")
+  isEdited        Boolean      @default(false)
+  isDeleted       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+// ===================================================================
+// COUPON CODES — Discount codes for course enrollment
+// ===================================================================
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+model Coupon {
+  id              String     @id @default(cuid())
+  code            String     @unique
+  description     String?
+  type            CouponType
+  value           Float      // percentage (0-100) or fixed amount in SAR
+  maxUses         Int        @default(0) // 0 = unlimited
+  maxUsesPerUser  Int        @default(1)
+  usedCount       Int        @default(0)
+  // Optional: limit to specific course
+  courseId        String?
+  course          Course?    @relation(fields: [courseId], references: [id])
+  // Optional: minimum order amount
+  minAmount       Float?
+  // Validity window
+  validFrom       DateTime   @default(now())
+  validUntil      DateTime?
+  isActive        Boolean    @default(true)
+  usages          CouponUsage[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([code])
+  @@index([courseId])
+  @@index([isActive])
+}
+
+model CouponUsage {
+  id          String   @id @default(cuid())
+  couponId    String
+  coupon      Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  courseId    String?
+  orderId     String?  // payment id or enrollment id
+  discountAmount Float // actual discount applied
+  createdAt   DateTime @default(now())
+
+  @@unique([couponId, userId, courseId])
+  @@index([couponId])
+  @@index([userId])
+}
+
+// ===================================================================
+// AFFILIATE PROGRAM — Referral links + tracking + payouts
+// ===================================================================
+
+enum AffiliateStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_PAYOUT
+  PAID
+}
+
+model Affiliate {
+  id              String          @id @default(cuid())
+  userId          String          @unique // one affiliate account per user
+  user            User            @relation(fields: [userId], references: [id])
+  referralCode    String          @unique
+  commissionRate  Float           @default(10) // percentage 0-100
+  status          AffiliateStatus @default(ACTIVE)
+  // Stats (denormalized)
+  totalClicks     Int             @default(0)
+  totalSignups    Int             @default(0)
+  totalConversions Int            @default(0)
+  totalEarnings   Float           @default(0) // SAR
+  paidOut         Float           @default(0) // SAR
+  pendingBalance  Float           @default(0) // SAR
+  // Relations
+  clicks          AffiliateClick[]
+  conversions     AffiliateConversion[]
+  payouts         AffiliatePayout[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([referralCode])
+  @@index([status])
+}
+
+model AffiliateClick {
+  id            String    @id @default(cuid())
+  affiliateId   String
+  affiliate     Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  // The user who clicked (if logged in). null for anonymous
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  // What they were referred to (course, generic landing, etc)
+  targetUrl     String
+  courseId      String?
+  course        Course?   @relation(fields: [courseId], references: [id])
+  // Tracking
+  ipAddress     String?
+  userAgent     String?
+  referrer      String?
+  converted     Boolean   @default(false)
+  conversion    AffiliateConversion?
+  createdAt     DateTime  @default(now())
+
+  @@index([affiliateId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ConversionType {
+  SIGNUP
+  ENROLLMENT
+  PURCHASE
+}
+
+model AffiliateConversion {
+  id            String         @id @default(cuid())
+  affiliateId   String
+  affiliate     Affiliate      @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  referredUserId String?
+  user          User?          @relation(fields: [referredUserId], references: [id])
+  courseId      String?
+  course        Course?        @relation(fields: [courseId], references: [id])
+  paymentId     String?        @unique
+  payment       Payment?       @relation(fields: [paymentId], references: [id])
+  type          ConversionType
+  amount        Float          // order amount
+  commission    Float          // commission earned
+  status        AffiliateStatus @default(PENDING_PAYOUT)
+  click         AffiliateClick? @relation(fields: [clickId], references: [id])
+  clickId       String?        @unique
+  createdAt     DateTime       @default(now())
+
+  @@index([affiliateId])
+  @@index([status])
+}
+
+model AffiliatePayout {
+  id            String    @id @default(cuid())
+  affiliateId   String
+  affiliate     Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  amount        Float     // SAR
+  method        String    @default("bank_transfer") // bank_transfer | paypal | stripe
+  status        String    @default("pending") // pending | completed | failed
+  reference     String?   // transaction reference
+  notes         String?   // JSON-encoded array of conversion IDs
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([affiliateId])
+  @@index([status])
+}
+
+// ===================================================================
+// MULTI-CURRENCY — Conversion rates + user preferences
+// ===================================================================
+
+model Currency {
+  code        String   @id // ISO 4217: USD, SAR, EUR, AED, etc.
+  name        String
+  symbol      String
+  exchangeRate Float   @default(1) // rate relative to base currency (SAR)
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
 }

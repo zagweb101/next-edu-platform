@@ -575,6 +575,214 @@ function Welcome() {
   }
   console.log(`  ✓ Sample payments created`);
 
+  // ===================================================================
+  // 9. Multi-currency support (NEW)
+  // ===================================================================
+  console.log('\n💱 Setting up currencies...');
+  const currencies = [
+    { code: 'SAR', name: 'ريال سعودي', symbol: 'ر.س', exchangeRate: 1 },
+    { code: 'USD', name: 'US Dollar', symbol: '$', exchangeRate: 0.27 },
+    { code: 'EUR', name: 'Euro', symbol: '€', exchangeRate: 0.25 },
+    { code: 'AED', name: 'درهم إماراتي', symbol: 'د.إ', exchangeRate: 0.98 },
+    { code: 'EGP', name: 'جنيه مصري', symbol: 'ج.م', exchangeRate: 13.0 },
+    { code: 'KWD', name: 'دينار كويتي', symbol: 'د.ك', exchangeRate: 0.082 },
+  ];
+  for (const cur of currencies) {
+    await db.currency.upsert({
+      where: { code: cur.code },
+      update: {},
+      create: cur,
+    });
+  }
+  console.log(`  ✓ ${currencies.length} currencies added`);
+
+  // ===================================================================
+  // 10. Forum categories + sample topic (NEW)
+  // ===================================================================
+  console.log('\n💬 Setting up forum...');
+  const forumCategory = await db.forumCategory.upsert({
+    where: { slug: 'general' },
+    update: {},
+    create: {
+      name: 'أسئلة عامة',
+      slug: 'general',
+      description: 'اسأل أي سؤال عن البرمجة',
+      color: '#3B82F6',
+      order: 0,
+    },
+  });
+
+  const forumTopic = await db.forumTopic.create({
+    data: {
+      categoryId: forumCategory.id,
+      authorId: student.id,
+      title: 'كيف أبدأ تعلم React؟',
+      slug: `how-to-start-react-${Date.now().toString(36)}`,
+      content: 'أنا مبتدئ تماماً وأريد تعلم React. من أين أبدأ؟ وما الكورسات التي تنصحون بها؟',
+    },
+  });
+
+  await db.forumPost.create({
+    data: {
+      topicId: forumTopic.id,
+      authorId: teacher.id,
+      content: 'أهلاً بك! أنصحك بالبدء بكورس "أساسيات React من الصفر" المتوفر في المنصة. سيعطيك أساس قوي.',
+    },
+  });
+
+  await db.forumTopic.update({
+    where: { id: forumTopic.id },
+    data: { postsCount: 1 },
+  });
+  console.log(`  ✓ Forum category + sample topic created`);
+
+  // ===================================================================
+  // 11. Coupon codes (NEW)
+  // ===================================================================
+  console.log('\n🎟️ Creating coupon codes...');
+  await db.coupon.upsert({
+    where: { code: 'WELCOME50' },
+    update: {},
+    create: {
+      code: 'WELCOME50',
+      description: 'خصم 50% للعملاء الجدد',
+      type: 'PERCENTAGE',
+      value: 50,
+      maxUses: 1000,
+      maxUsesPerUser: 1,
+      minAmount: 50,
+      isActive: true,
+    },
+  });
+
+  await db.coupon.upsert({
+    where: { code: 'SAVE25' },
+    update: {},
+    create: {
+      code: 'SAVE25',
+      description: 'خصم 25% على كل الكورسات',
+      type: 'PERCENTAGE',
+      value: 25,
+      maxUses: 0, // unlimited
+      maxUsesPerUser: 5,
+      isActive: true,
+    },
+  });
+
+  await db.coupon.upsert({
+    where: { code: 'FLAT50' },
+    update: {},
+    create: {
+      code: 'FLAT50',
+      description: 'خصم ثابت 50 ر.س',
+      type: 'FIXED',
+      value: 50,
+      maxUses: 500,
+      maxUsesPerUser: 1,
+      minAmount: 100,
+      courseId: course2.id,
+      isActive: true,
+    },
+  });
+  console.log(`  ✓ 3 coupon codes created (WELCOME50, SAVE25, FLAT50)`);
+
+  // ===================================================================
+  // 12. Affiliate account for teacher (NEW)
+  // ===================================================================
+  console.log('\n💰 Creating affiliate account...');
+  const affiliate = await db.affiliate.upsert({
+    where: { userId: teacher.id },
+    update: {},
+    create: {
+      userId: teacher.id,
+      referralCode: 'ahmed-teacher',
+      commissionRate: 15, // 15% commission
+      status: 'ACTIVE',
+    },
+  });
+  console.log(`  ✓ Affiliate account created for teacher (code: ahmed-teacher)`);
+
+  // Sample conversion
+  await db.affiliateConversion.create({
+    data: {
+      affiliateId: affiliate.id,
+      referredUserId: student.id,
+      courseId: course1.id,
+      type: 'ENROLLMENT',
+      amount: 0,
+      commission: 0,
+      status: 'PAID',
+    },
+  });
+  await db.affiliate.update({
+    where: { id: affiliate.id },
+    data: {
+      totalClicks: 42,
+      totalSignups: 8,
+      totalConversions: 3,
+    },
+  });
+  console.log(`  ✓ Sample affiliate conversion recorded`);
+
+  // ===================================================================
+  // 13. Live session (NEW)
+  // ===================================================================
+  console.log('\n📺 Creating sample live session...');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(20, 0, 0, 0);
+
+  await db.liveSession.create({
+    data: {
+      title: 'سؤال وجواب مباشر: React Hooks',
+      description: 'جلسة مباشرة للإجابة على أسئلة الطلاب حول React Hooks',
+      teacherId: teacher.id,
+      courseId: course1.id,
+      provider: 'WEBRTC',
+      status: 'SCHEDULED',
+      scheduledStart: tomorrow,
+      scheduledEnd: new Date(tomorrow.getTime() + 90 * 60 * 1000),
+      webrtcRoomId: `room-${Date.now()}`,
+    },
+  });
+  console.log(`  ✓ Sample live session created (scheduled for tomorrow)`);
+
+  // ===================================================================
+  // 14. Sample conversation (NEW)
+  // ===================================================================
+  console.log('\n💬 Creating sample conversation...');
+  const existingConv = await db.conversation.count();
+  if (existingConv === 0) {
+    const conversation = await db.conversation.create({
+      data: {
+        participants: {
+          create: [
+            { userId: student.id },
+            { userId: teacher.id },
+          ],
+        },
+        lastMessageAt: new Date(),
+      },
+    });
+
+    await db.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: student.id,
+        content: 'السلام عليكم، عندي سؤال عن الكورس',
+      },
+    });
+
+    await db.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: teacher.id,
+        content: 'وعليكم السلام، تفضل اسأل! أنا هنا لمساعدتك.',
+      },
+    });
+    console.log(`  ✓ Sample conversation + 2 messages created`);
+  }
+
   console.log('\n✅ Seed completed!');
   console.log('\n📋 Test accounts:');
   console.log('  Admin:    admin@edu-platform.dev / admin12345');

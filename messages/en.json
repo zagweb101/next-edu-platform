@@ -83,7 +83,12 @@
     "viewAll": "View all",
     "myCourses": "My Courses",
     "certificates": "My Certificates",
-    "teach": "Teach"
+    "teach": "Teach",
+    "live": "Live Streaming",
+    "forum": "Forum",
+    "messages": "Messages",
+    "affiliate": "Affiliate Program",
+    "coupons": "Coupon Codes"
   },
   "roles": {
     "ADMIN": "Admin",

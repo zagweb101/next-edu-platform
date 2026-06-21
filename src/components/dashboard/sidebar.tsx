@@ -24,6 +24,11 @@ import {
   BookOpen,
   Award,
   Presentation,
+  Radio,
+  MessageSquare,
+  Ticket,
+  DollarSign,
+  Globe,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
@@ -49,13 +54,22 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/my-courses', labelKey: 'dashboard.myCourses', icon: BookOpen, allowedRoles: ['STUDENT', 'TEACHER', 'ADMIN'] },
   { href: '/dashboard/certificates', labelKey: 'dashboard.certificates', icon: Award, allowedRoles: ['STUDENT', 'TEACHER', 'ADMIN'] },
 
+  // Community items (NEW)
+  { href: '/live', labelKey: 'dashboard.live', icon: Radio },
+  { href: '/forum', labelKey: 'dashboard.forum', icon: MessageSquare },
+  { href: '/dashboard/messages', labelKey: 'dashboard.messages', icon: MessageSquare },
+
   // Teacher items
   { href: '/teach', labelKey: 'dashboard.teach', icon: Presentation, allowedRoles: ['TEACHER', 'ADMIN'] },
+
+  // Affiliate (NEW)
+  { href: '/dashboard/affiliate', labelKey: 'dashboard.affiliate', icon: DollarSign },
 
   // Admin items
   { href: '/dashboard/analytics', labelKey: 'dashboard.analytics', icon: BarChart3, allowedRoles: ['TEACHER', 'ADMIN'] },
   { href: '/dashboard/users', labelKey: 'dashboard.users', icon: Users, allowedRoles: ['ADMIN'] },
   { href: '/dashboard/payments', labelKey: 'dashboard.payments', icon: CreditCard, allowedRoles: ['ADMIN'] },
+  { href: '/dashboard/coupons', labelKey: 'dashboard.coupons', icon: Ticket, allowedRoles: ['ADMIN'] },
   { href: '/dashboard/notifications', labelKey: 'dashboard.notifications', icon: Bell },
   { href: '/dashboard/audit', labelKey: 'dashboard.auditLog', icon: ShieldAlert, allowedRoles: ['ADMIN'] },
   { href: '/dashboard/settings', labelKey: 'dashboard.settings', icon: Settings, allowedRoles: ['ADMIN'] },
@@ -86,9 +100,13 @@ export function DashboardSidebar() {
   const studentItems = visibleItems.filter(i =>
     ['/dashboard', '/dashboard/my-courses', '/dashboard/certificates'].includes(i.href)
   );
+  const communityItems = visibleItems.filter(i =>
+    ['/live', '/forum', '/dashboard/messages'].includes(i.href)
+  );
   const teacherItems = visibleItems.filter(i => i.href.startsWith('/teach'));
+  const affiliateItems = visibleItems.filter(i => i.href === '/dashboard/affiliate');
   const adminItems = visibleItems.filter(i =>
-    ['/dashboard/analytics', '/dashboard/users', '/dashboard/payments', '/dashboard/notifications', '/dashboard/audit', '/dashboard/settings'].includes(i.href)
+    ['/dashboard/analytics', '/dashboard/users', '/dashboard/payments', '/dashboard/coupons', '/dashboard/notifications', '/dashboard/audit', '/dashboard/settings'].includes(i.href)
   );
 
   return (
@@ -137,11 +155,35 @@ export function DashboardSidebar() {
             />
           )}
 
+          {/* Community section (NEW) */}
+          {communityItems.length > 0 && (
+            <NavSection
+              title={locale === 'ar' ? 'المجتمع' : 'Community'}
+              items={communityItems}
+              pathname={pathname}
+              isRtl={isRtl}
+              collapsed={collapsed}
+              t={t}
+            />
+          )}
+
           {/* Teacher section */}
           {teacherItems.length > 0 && (
             <NavSection
               title={locale === 'ar' ? 'التدريس' : 'Teaching'}
               items={teacherItems}
+              pathname={pathname}
+              isRtl={isRtl}
+              collapsed={collapsed}
+              t={t}
+            />
+          )}
+
+          {/* Affiliate section (NEW) */}
+          {affiliateItems.length > 0 && (
+            <NavSection
+              title={locale === 'ar' ? 'العمولة' : 'Affiliate'}
+              items={affiliateItems}
               pathname={pathname}
               isRtl={isRtl}
               collapsed={collapsed}
