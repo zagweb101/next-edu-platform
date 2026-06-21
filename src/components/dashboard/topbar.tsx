@@ -29,6 +29,9 @@ import {
   BarChart3,
   ShieldAlert,
   LogOut,
+  BookOpen,
+  Award,
+  Presentation,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
@@ -74,12 +77,20 @@ export function DashboardTopbar() {
 
   const NAV = [
     { href: '/dashboard', label: t('dashboard.overview'), icon: LayoutDashboard },
-    { href: '/dashboard/analytics', label: t('dashboard.analytics'), icon: BarChart3 },
-    { href: '/dashboard/users', label: t('dashboard.users'), icon: Users },
-    { href: '/dashboard/payments', label: t('dashboard.payments'), icon: CreditCard },
+    { href: '/dashboard/my-courses', label: t('dashboard.myCourses'), icon: BookOpen },
+    { href: '/dashboard/certificates', label: t('dashboard.certificates'), icon: Award },
+    ...(session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN'
+      ? [{ href: '/teach', label: t('dashboard.teach'), icon: Presentation }]
+      : []),
+    ...(session?.user?.role === 'ADMIN'
+      ? [
+          { href: '/dashboard/users', label: t('dashboard.users'), icon: Users },
+          { href: '/dashboard/payments', label: t('dashboard.payments'), icon: CreditCard },
+          { href: '/dashboard/audit', label: t('dashboard.auditLog'), icon: ShieldAlert },
+          { href: '/dashboard/settings', label: t('dashboard.settings'), icon: Settings },
+        ]
+      : []),
     { href: '/dashboard/notifications', label: t('dashboard.notifications'), icon: BellIcon },
-    { href: '/dashboard/audit', label: t('dashboard.auditLog'), icon: ShieldAlert },
-    { href: '/dashboard/settings', label: t('dashboard.settings'), icon: Settings },
   ];
 
   return (

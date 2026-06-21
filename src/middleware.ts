@@ -2,7 +2,9 @@
  * Global proxy (formerly middleware) — combines:
  *   1. next-intl locale routing
  *   2. NextAuth session protection for /dashboard/*
- *   3. Role-based redirects (e.g., /dashboard/users requires MANAGER+)
+ *   3. Role-based redirects for Education Platform
+ *
+ * Education roles: STUDENT, TEACHER, ADMIN
  *
  * Note: Next.js 16 renamed "middleware" to "proxy" — kept the file name as
  * middleware.ts for backwards compatibility (Next.js still supports it).
@@ -17,11 +19,31 @@ const intlMiddleware = createMiddleware(routing);
 // Routes that require authentication (matched against pathname WITHOUT locale prefix)
 const PROTECTED_PREFIXES = ['/dashboard'];
 
-// Routes that require specific roles
-const ROLE_RULES: { pattern: RegExp; role: 'ADMIN' | 'MANAGER' | 'USER' }[] = [
-  { pattern: /^\/dashboard\/users/, role: 'MANAGER' },
-  { pattern: /^\/dashboard\/audit/, role: 'ADMIN' },
-  { pattern: /^\/dashboard\/settings/, role: 'ADMIN' },
+// Routes that require specific roles for the Education Platform
+// - /dashboard/teach/* → TEACHER+ (teacher & admin)
+// - /dashboard/admin/* → ADMIN only
+// - /dashboard/users → ADMIN only
+// - /dashboard/audit → ADMIN only
+// - /dashboard/settings → ADMIN only
+type Role = 'STUDENT' | 'TEACHER' | 'ADMIN';
+const ROLE_HIERARCHY: Role[] = ['STUDENT', 'TEACHER', 'ADMIN'];
+
+interface RoleRule {
+  pattern: RegExp;
+  /** Minimum role required (hierarchy-based) */
+  minRole: Role;
+  /** OR: specific allowed roles (alternative to minRole) */
+  allowedRoles?: Role[];
+}
+
+const ROLE_RULES: RoleRule[] = [
+  // Teacher-only area
+  { pattern: /^\/dashboard\/teach/, minRole: 'TEACHER' },
+  // Admin-only areas
+  { pattern: /^\/dashboard\/users/, minRole: 'ADMIN' },
+  { pattern: /^\/dashboard\/audit/, minRole: 'ADMIN' },
+  { pattern: /^\/dashboard\/settings/, minRole: 'ADMIN' },
+  { pattern: /^\/dashboard\/admin/, minRole: 'ADMIN' },
 ];
 
 export async function middleware(req: NextRequest) {
@@ -69,9 +91,17 @@ export async function middleware(req: NextRequest) {
   // Step 3: Role-based check
   for (const rule of ROLE_RULES) {
     if (rule.pattern.test(pathWithoutLocale)) {
-      const userRole = (token.role as string) || 'USER';
-      const hierarchy = ['USER', 'MANAGER', 'ADMIN'];
-      if (hierarchy.indexOf(userRole) < hierarchy.indexOf(rule.role)) {
+      const userRole = (token.role as Role) || 'STUDENT';
+
+      // Check using allowedRoles (if specified) or minRole hierarchy
+      let authorized: boolean;
+      if (rule.allowedRoles) {
+        authorized = rule.allowedRoles.includes(userRole);
+      } else {
+        authorized = ROLE_HIERARCHY.indexOf(userRole) >= ROLE_HIERARCHY.indexOf(rule.minRole);
+      }
+
+      if (!authorized) {
         const forbiddenUrl = new URL(`/${routing.defaultLocale}/forbidden`, req.url);
         return NextResponse.redirect(forbiddenUrl);
       }

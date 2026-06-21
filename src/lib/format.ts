@@ -44,3 +44,37 @@ export function formatRelative(date: Date | string, locale = 'ar') {
   if (abs < 31536000) return rtf.format(Math.round(diff / 2592000), 'month');
   return rtf.format(Math.round(diff / 31536000), 'year');
 }
+
+/**
+ * Format a duration (in seconds) as a human-readable string.
+ * Examples: 540 → "9 د" / "9m", 3600 → "1 س" / "1h", 0 → "—"
+ */
+export function formatDuration(seconds: number, locale = 'ar'): string {
+  if (!seconds || seconds <= 0) return '—';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (locale === 'ar') {
+    if (hours > 0 && minutes > 0) return `${hours} س ${minutes} د`;
+    if (hours > 0) return `${hours} س`;
+    return `${minutes} د`;
+  }
+
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${minutes}m`;
+}
+
+/**
+ * Format a duration (in seconds) as MM:SS or HH:MM:SS for video players.
+ * Examples: 540 → "09:00", 3661 → "1:01:01"
+ */
+export function formatVideoTime(seconds: number): string {
+  if (!seconds || seconds < 0) return '00:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}

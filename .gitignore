@@ -70,3 +70,4 @@ server.log
 
 # os
 Thumbs.db
+/download/
